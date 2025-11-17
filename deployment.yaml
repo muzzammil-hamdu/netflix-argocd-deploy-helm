@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netflix-app
+  labels:
+    app: netflix-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: netflix-app
+  template:
+    metadata:
+      labels:
+        app: netflix-app
+    spec:
+      containers:
+      - name: netflix-app
+        image: mujju752/netflix-app:latest  # Jenkins updates this
+        ports:
+        - containerPort: 3000
+        env:
+        - name: TMDB_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netflix-secret
+              key: TMDB_KEY
