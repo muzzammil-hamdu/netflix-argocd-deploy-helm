@@ -9,9 +9,8 @@ spec:
     matchLabels:
       app: netflix-app
   endpoints:
-    - port: http
-      interval: 30s
-      scrapeTimeout: 10s
-      path: /metrics
+  - port: http
+    interval: 30s
+    path: /metrics
   namespaceSelector:
     any: true
