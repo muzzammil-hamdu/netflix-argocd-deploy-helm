@@ -7,6 +7,6 @@ spec:
   selector:
     app: netflix-app
   ports:
-    - name: http
-      port: 80
-      targetPort: 3000
+  - name: http
+    port: 80
+    targetPort: 3020
