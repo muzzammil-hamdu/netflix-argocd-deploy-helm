@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-netflix
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"    # <-- Very important
+data:
+  netflix-dashboard.json: |
+{{ .Files.Get "grafana-dashboard-netflix.json" | indent 4 }}
