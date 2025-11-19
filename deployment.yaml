@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: netflix-app
-        image: mujju752/netflix-app:46
+        image: mujju752/netflix-app:47
         ports:
         - containerPort: 3020
         env:
