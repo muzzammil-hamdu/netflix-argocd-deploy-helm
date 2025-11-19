@@ -2,4 +2,5 @@
   - deployment.yaml
   - service.yaml
   - hpa.yaml
+  - sealed-secret.yaml
 
