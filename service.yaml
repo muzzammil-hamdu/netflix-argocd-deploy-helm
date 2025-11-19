@@ -3,11 +3,14 @@ kind: Service
 metadata:
   name: netflix-service
   namespace: default
+  labels:
+    app: netflix-app
 spec:
   type: LoadBalancer
   selector:
     app: netflix-app
   ports:
-  - name: http
-    port: 80
-    targetPort: 3020
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
