@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: netflix-app
-        image: mujju752/netflix-app:66
+        image: mujju752/netflix-app:70
         ports:
         - name: http              # Needed for Prometheus scraping
           containerPort: 3000
