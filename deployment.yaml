@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: netflix-app
-        image: mujju752/netflix-app:71
+        image: mujju752/netflix-app:74
         ports:
           - name: http
             containerPort: 3000          # App + /api/metrics on same port
