@@ -17,10 +17,9 @@ spec:
     spec:
       containers:
       - name: netflix-app
-        image: mujju752/netflix-app:74
+        image: mujju752/netflix-app:latest
         ports:
-          - name: http
-            containerPort: 3000          # App + /api/metrics on same port
+        - containerPort: 3000
         env:
         - name: TMDB_KEY
           valueFrom:
