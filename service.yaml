@@ -10,7 +10,7 @@ spec:
   selector:
     app: netflix-app
   ports:
-    - port: 80
+    - name: http        # Required for Prometheus ServiceMonitor
+      port: 80
       targetPort: 3000
       protocol: TCP
-      name: http
