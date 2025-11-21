@@ -3,4 +3,6 @@
   - service.yaml
   - hpa.yaml
   - sealed-secret.yaml
-
+  - grafana-dashboard.yaml
+  - prometheus-rules.yaml
+  - servicemonitor.yaml
