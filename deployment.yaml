@@ -19,7 +19,13 @@ spec:
       - name: netflix-app
         image: mujju752/netflix-app:66
         ports:
-        - containerPort: 3000
+        - name: http              # Needed for Prometheus scraping
+          containerPort: 3000
+
+        # If your app has /metrics, expose this (optional)
+        # - name: metrics
+        #   containerPort: 9100
+
         env:
         - name: TMDB_KEY
           valueFrom:
