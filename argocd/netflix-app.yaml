@@ -1,20 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: netflix-app
+  name: netflix
   namespace: argocd
 spec:
   project: default
-
   source:
     repoURL: https://github.com/muzzammil-hamdu/netflix-argocd-deploy-helm.git
     targetRevision: main
-    path: charts/netflix   # <-- FIXED PATH
-
+    path: charts/netflix
+    helm:
+      releaseName: netflix
   destination:
     server: https://kubernetes.default.svc
     namespace: netflix
-
   syncPolicy:
     automated:
       prune: true
