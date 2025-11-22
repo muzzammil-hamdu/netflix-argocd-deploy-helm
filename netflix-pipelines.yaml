@@ -120,6 +120,7 @@ stages:
         - script: |
             echo "=== DEBUG: Pipeline Variables ==="
             echo "Build.BuildId: $(Build.BuildId)"
+            echo "Build.BuildNumber: $(Build.BuildNumber)"
             echo "dockerHubUser: $(dockerHubUser)"
             echo "imageName: $(imageName)"
             echo "valuesFile: $(valuesFile)"
@@ -132,31 +133,26 @@ stages:
           displayName: "Debug: Check Variables"
 
         - script: |
-            echo "Updating values.yaml with new image..."
-            echo "Build ID: $(Build.BuildId)"
-            echo "Docker Hub User: $(dockerHubUser)"
-            echo "Image Name: $(imageName)"
-            echo "New image: $(dockerHubUser)/$(imageName):$(Build.BuildId)"
+            echo "=== Updating values.yaml ==="
+            BUILD_TAG=$(Build.BuildId)
+            
+            echo "Build Tag: $BUILD_TAG"
+            echo "File: $(valuesFile)"
             
             echo ""
-            echo "Current values.yaml:"
+            echo "Before update:"
+            cat "$(valuesFile)" | grep -A 3 "image:"
+            
+            echo ""
+            echo "Updating with sed..."
+            sed -i "s/tag: .*/tag: \"$BUILD_TAG\"/" "$(valuesFile)"
+            
+            echo "After update:"
+            cat "$(valuesFile)" | grep -A 3 "image:"
+            
+            echo ""
+            echo "Full values.yaml:"
             cat "$(valuesFile)"
-            
-            echo ""
-            echo "Updating repository..."
-            yq -i '.image.repository = "$(dockerHubUser)/$(imageName)"' "$(valuesFile)"
-            
-            echo "Updating tag..."
-            yq -i '.image.tag = "$(Build.BuildId)"' "$(valuesFile)"
-
-            echo ""
-            echo "Updated values.yaml:"
-            cat "$(valuesFile)"
-            
-            echo ""
-            echo "Verifying image values:"
-            echo "Repository: $(yq '.image.repository' $(valuesFile))"
-            echo "Tag: $(yq '.image.tag' $(valuesFile))"
           displayName: "Update values.yaml"
 
         - script: |
