@@ -8,7 +8,12 @@ image:
 imagePullSecrets:
   - name: dockerhub-secret
 
-# TMDB API key will NOT be stored here — it is stored in a sealed secret
+# Secrets configuration
+secrets:
+  enabled: true
+  name: netflix-secrets
+
+# API Key configuration
 apiKey:
   enabled: true
   secretName: netflix-secrets
