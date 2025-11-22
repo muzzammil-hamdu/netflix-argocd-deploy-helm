@@ -1,0 +1,25 @@
+grafana:
+  service:
+    type: LoadBalancer
+
+prometheus:
+  service:
+    type: LoadBalancer
+
+alertmanager:
+  service:
+    type: LoadBalancer
+
+prometheusRule:
+  additionalPrometheusRulesMap:
+    netflix-rules:
+      groups:
+        - name: netflix
+          rules:
+            - alert: HighErrorRate
+              expr: rate(http_requests_total{app="netflix",status=~"5.."}[5m]) > 5
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Netflix app failing"
