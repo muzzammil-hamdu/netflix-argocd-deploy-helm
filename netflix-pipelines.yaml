@@ -118,6 +118,20 @@ stages:
           displayName: "Verify values.yaml"
 
         - script: |
+            echo "=== DEBUG: Pipeline Variables ==="
+            echo "Build.BuildId: $(Build.BuildId)"
+            echo "dockerHubUser: $(dockerHubUser)"
+            echo "imageName: $(imageName)"
+            echo "valuesFile: $(valuesFile)"
+            echo ""
+            
+            if [ -z "$(Build.BuildId)" ]; then
+              echo "ERROR: Build.BuildId is empty!"
+              exit 1
+            fi
+          displayName: "Debug: Check Variables"
+
+        - script: |
             echo "Updating values.yaml with new image..."
             echo "Build ID: $(Build.BuildId)"
             echo "Docker Hub User: $(dockerHubUser)"
