@@ -1,3 +1,5 @@
+---
+# Create this file: grafana/grafana-dashboards.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,8 +8,123 @@ metadata:
   labels:
     grafana_dashboard: "1"
 data:
-  netflix-app.json: |
-{{ .Files.Get "grafana/dashboards/netflix-app.json" | indent 4 }}
+  netflix-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Netflix Application",
+        "uid": "netflix-app",
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Pod CPU Usage",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{pod=~\"netflix.*\"}[5m])"
+              }
+            ]
+          },
+          {
+            "title": "Pod Memory Usage",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{pod=~\"netflix.*\"}"
+              }
+            ]
+          },
+          {
+            "title": "HTTP Requests",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"netflix\"}[5m])"
+              }
+            ]
+          }
+        ]
+      }
+    }
 
-  node-exporter.json: |
-{{ .Files.Get "grafana/dashboards/node-exporter.json" | indent 4 }}
+  node-exporter-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Node Exporter",
+        "uid": "node-exporter",
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Node CPU",
+            "targets": [
+              {
+                "expr": "rate(node_cpu_seconds_total[5m])"
+              }
+            ]
+          },
+          {
+            "title": "Node Memory",
+            "targets": [
+              {
+                "expr": "node_memory_MemAvailable_bytes"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+# Create this file: grafana/grafana-datasources.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: true
+
+---
+# Create this file: grafana/grafana-values.yaml
+# For Helm deployment
+persistence:
+  enabled: true
+  size: 10Gi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090
+      access: proxy
+      isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    netflix:
+      gnetId: null
+      revision: 1
+      datasource: Prometheus
+    node-exporter:
+      gnetId: null
+      revision: 1
+      datasource: Prometheus
