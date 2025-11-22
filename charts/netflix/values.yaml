@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: mujju752/netflix
-  tag: ""  # Automatically updated by Azure DevOps pipeline
+  tag: "latest"  # Automatically updated by Azure DevOps pipeline
   pullPolicy: Always
 
 imagePullSecrets:
