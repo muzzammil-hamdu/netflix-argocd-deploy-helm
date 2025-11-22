@@ -20,7 +20,7 @@ variables:
   argocdServer: "4.220.46.113"
   argocdUsername: "admin"
   argocdPassword: "24cdDusPoHSVnbtc"
-  dockerHubPassword: "YOUR_DOCKERHUB_PASSWORD"
+  dockerHubPassword: "dckr_pat_NV542SSR-m61PhBNtf52XKhk2aM"
   prometheusURL: "http://4.220.4.31:9090"
   grafanaURL: "http://4.220.4.31:3000"
   alertmanagerURL: "http://4.220.4.31:9093"
@@ -456,3 +456,4 @@ stages:
             
           condition: failed()
           displayName: "Automatic Rollback"
+
