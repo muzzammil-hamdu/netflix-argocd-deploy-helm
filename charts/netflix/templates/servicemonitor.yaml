@@ -1,0 +1,13 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: netflix
+spec:
+  selector:
+    matchLabels:
+      app: netflix
+  endpoints:
+    - port: http
+      interval: {{ .Values.serviceMonitor.interval }}
+{{- end }}
