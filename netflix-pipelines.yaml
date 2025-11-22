@@ -19,7 +19,7 @@ variables:
   valuesFile: "charts/netflix/values.yaml"
   argocdServer: "4.220.46.113"
   argocdUsername: "azure-pipeline"
-  argocdToken: "eb63b71aa9fd5c22ccbf3f56c6cec1d31f331eeb3a2951c17b14b592f0ee44d2"
+  argocdToken: "25b61de83dc2ffc6e281b3e38b143b20aef859cb0ebb6c0f9898677d9b491434"
   prometheusURL: "http://4.220.4.31:9090"
   grafanaURL: "http://4.220.4.31:3000"
   alertmanagerURL: "http://4.220.4.31:9093"
@@ -277,18 +277,17 @@ stages:
 
         - script: |
             echo "=== Manual ArgoCD Sync ==="
-            export ARGOCD_OPTS='--insecure --grpc-web'
             
-            echo "Logging into ArgoCD..."
-            echo $(argocdToken) | argocd login $(argocdServer) --username $(argocdUsername) --password-stdin
+            echo "Checking ArgoCD connectivity..."
+            argocd app list --insecure --grpc-web
             
             echo ""
             echo "Getting app status..."
-            argocd app get netflix
+            argocd app get netflix --insecure --grpc-web
             
             echo ""
             echo "Forcing sync..."
-            argocd app sync netflix --prune
+            argocd app sync netflix --prune --insecure --grpc-web
             
             echo ""
             echo "Waiting for sync..."
@@ -296,10 +295,11 @@ stages:
             
             echo ""
             echo "Checking status after sync..."
-            argocd app get netflix
+            argocd app get netflix --insecure --grpc-web
           displayName: "Manual ArgoCD Sync"
           continueOnError: true
           env:
+            ARGOCD_SERVER: $(argocdServer)
             ARGOCD_AUTH_TOKEN: $(argocdToken)
 
         - script: |
