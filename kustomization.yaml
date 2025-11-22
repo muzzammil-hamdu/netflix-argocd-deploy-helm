@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: netflix
+
+resources:
+  - namespace.yaml
+  - secrets/tmdb-sealed-secret.yaml
+  - charts/netflix/templates/dockerhub-secret.yaml
+  - charts/netflix/templates/secret.yaml
+  - charts/netflix/templates/deployment.yaml
+  - charts/netflix/templates/service.yaml
+  - charts/netflix/templates/ingress.yaml
+  - charts/netflix/templates/hpa.yaml
+  - charts/netflix/templates/servicemonitor.yaml
