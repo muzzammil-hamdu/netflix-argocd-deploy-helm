@@ -1,23 +1,45 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "netflix.fullname" . }}
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app: netflix
-  template:
-    metadata:
-      labels:
-        app: netflix
-    spec:
-      imagePullSecrets:
-      - name: dockerhub-secret
-      containers:
-      - name: netflix
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        ports:
-        - containerPort: 3000
-        env:
-        {{- toYaml .Values.env | nindent 10 }}
+# Netflix Helm values.yaml
+replicaCount: 2
+
+image:
+  repository: mujju752/netflix
+  tag: "v1.0"  # Updated to new build
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: dockerhub-secret
+
+service:
+  type: LoadBalancer  # Changed from ClusterIP to access externally
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  tls: false
+  hosts:
+    - host: netflix.your-domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: TMDB_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: netflix-secrets
+        key: TMDB_KEY
+
