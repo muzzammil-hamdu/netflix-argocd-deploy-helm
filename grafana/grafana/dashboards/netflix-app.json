@@ -1,0 +1,48 @@
+{
+  "title": "Netflix App Monitoring",
+  "uid": "netflix-app",
+  "schemaVersion": 36,
+  "overwrite": true,
+  "panels": [
+    {
+      "type": "graph",
+      "title": "HTTP Requests",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{app=\"netflix\"}[5m]))",
+          "legendFormat": "Requests/sec"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "HTTP 5xx Errors",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\",app=\"netflix\"}[5m]))",
+          "legendFormat": "Errors/sec"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "CPU Usage",
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"netflix.*\"}[5m]))",
+          "legendFormat": "CPU"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Memory Usage",
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{pod=~\"netflix.*\"})",
+          "legendFormat": "Memory"
+        }
+      ]
+    }
+  ]
+}
