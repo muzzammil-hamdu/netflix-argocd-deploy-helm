@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: muzzammil-hamdu/netflix
+  repository: mujju752/netflix
   tag: "latest"
   pullPolicy: Always
 
