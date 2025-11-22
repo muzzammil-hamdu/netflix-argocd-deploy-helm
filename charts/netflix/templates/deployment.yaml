@@ -1,45 +1,54 @@
-# Netflix Helm values.yaml
-replicaCount: 2
-
-image:
-  repository: mujju752/netflix
-  tag: "v1.0"  # Updated to new build
-  pullPolicy: Always
-
-imagePullSecrets:
-  - name: dockerhub-secret
-
-service:
-  type: LoadBalancer  # Changed from ClusterIP to access externally
-  port: 80
-  targetPort: 3000
-
-ingress:
-  enabled: true
-  className: nginx
-  tls: false
-  hosts:
-    - host: netflix.your-domain.com
-      paths:
-        - path: /
-          pathType: Prefix
-
-autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 70
-
-serviceMonitor:
-  enabled: true
-  interval: 30s
-
-env:
-  - name: NODE_ENV
-    value: "production"
-  - name: TMDB_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: netflix-secrets
-        key: TMDB_KEY
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netflix.fullname" . }}
+  labels:
+    {{- include "netflix.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "netflix.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "netflix.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: default
+      securityContext:
+        runAsNonRoot: false
+      containers:
+      - name: netflix
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        env:
+          {{- toYaml .Values.env | nindent 12 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 20
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
