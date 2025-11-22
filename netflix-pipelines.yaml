@@ -18,8 +18,8 @@ variables:
   imageName: "netflix"
   valuesFile: "charts/netflix/values.yaml"
   argocdServer: "4.220.46.113"
-  argocdUsername: "azure-pipeline"
-  argocdToken: "25b61de83dc2ffc6e281b3e38b143b20aef859cb0ebb6c0f9898677d9b491434"
+  argocdUsername: "admin"
+  argocdPassword: "24cdDusPoHSVnbtc"
   prometheusURL: "http://4.220.4.31:9090"
   grafanaURL: "http://4.220.4.31:3000"
   alertmanagerURL: "http://4.220.4.31:9093"
@@ -222,6 +222,10 @@ stages:
         - script: |
             echo "=== Checking ArgoCD Setup ==="
             
+            echo "Logging in with admin credentials..."
+            argocd login $(argocdServer) --username $(argocdUsername) --password $(argocdPassword) --insecure --grpc-web
+            
+            echo ""
             echo "Listing ArgoCD applications..."
             argocd app list --insecure --grpc-web || echo "Warning: Could not list apps"
             
@@ -244,9 +248,6 @@ stages:
             echo "ArgoCD sync complete"
           displayName: "Trigger ArgoCD Sync"
           continueOnError: true
-          env:
-            ARGOCD_SERVER: $(argocdServer)
-            ARGOCD_AUTH_TOKEN: $(argocdToken)
 
         - script: |
             echo "Waiting 30 seconds for deployment to stabilize..."
@@ -274,6 +275,10 @@ stages:
         - script: |
             echo "=== Manual ArgoCD Sync ==="
             
+            echo "Logging in with admin credentials..."
+            argocd login $(argocdServer) --username $(argocdUsername) --password $(argocdPassword) --insecure --grpc-web
+            
+            echo ""
             echo "Checking ArgoCD connectivity..."
             argocd app list --insecure --grpc-web
             
@@ -294,9 +299,6 @@ stages:
             argocd app get netflix --insecure --grpc-web
           displayName: "Manual ArgoCD Sync"
           continueOnError: true
-          env:
-            ARGOCD_SERVER: $(argocdServer)
-            ARGOCD_AUTH_TOKEN: $(argocdToken)
 
         - script: |
             echo "=== Validating Kubernetes Deployment ==="
@@ -391,10 +393,9 @@ stages:
             
             echo ""
             echo "=== Syncing rollback with ArgoCD ==="
-            export ARGOCD_OPTS='--insecure --grpc-web'
-            echo $(argocdToken) | argocd login $(argocdServer) --username $(argocdUsername) --password-stdin
-            argocd app sync netflix --prune
-            argocd app wait netflix --timeout 300
+            argocd login $(argocdServer) --username $(argocdUsername) --password $(argocdPassword) --insecure --grpc-web
+            argocd app sync netflix --prune --insecure --grpc-web
+            argocd app wait netflix --timeout 300 --insecure --grpc-web
             
             echo ""
             echo "Status after rollback:"
@@ -403,5 +404,3 @@ stages:
             
           condition: failed()
           displayName: "Automatic Rollback"
-          env:
-            ARGOCD_AUTH_TOKEN: $(argocdToken)
