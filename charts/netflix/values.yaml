@@ -2,16 +2,17 @@ replicaCount: 2
 
 image:
   repository: mujju752/netflix
-  tag: ""                 # updated by pipeline
+  tag: ""  # Automatically updated by Azure DevOps pipeline
   pullPolicy: Always
 
 imagePullSecrets:
   - name: dockerhub-secret
 
+# TMDB API key will NOT be stored here — it is stored in a sealed secret
 apiKey:
-  create: false                 # we aren’t storing plaintext in Helm
-  existingSecret: netflix-secrets
-  keyName: TMDB_KEY
+  enabled: true
+  secretName: netflix-secrets
+  secretKey: TMDB_KEY
 
 service:
   type: ClusterIP
@@ -21,6 +22,7 @@ service:
 ingress:
   enabled: true
   className: nginx
+  tls: false
   hosts:
     - host: netflix.your-domain.com
       paths:
