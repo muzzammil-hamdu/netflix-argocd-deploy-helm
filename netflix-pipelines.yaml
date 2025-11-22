@@ -20,6 +20,7 @@ variables:
   argocdServer: "4.220.46.113"
   argocdUsername: "admin"
   argocdPassword: "24cdDusPoHSVnbtc"
+  dockerHubPassword: "YOUR_DOCKERHUB_PASSWORD"
   prometheusURL: "http://4.220.4.31:9090"
   grafanaURL: "http://4.220.4.31:3000"
   alertmanagerURL: "http://4.220.4.31:9093"
@@ -202,6 +203,29 @@ stages:
             echo ""
             echo "Verifying Application exists..."
             kubectl get application netflix -n argocd
+            
+            echo ""
+            echo "=== Creating Docker Registry Secret ==="
+            
+            # Check if secret exists
+            if kubectl get secret dockerhub-secret -n netflix &>/dev/null; then
+              echo "✓ Docker registry secret already exists"
+            else
+              echo "Creating docker registry secret..."
+              kubectl create secret docker-registry dockerhub-secret \
+                --docker-server=docker.io \
+                --docker-username=$(dockerHubUser) \
+                --docker-password=$(dockerHubPassword) \
+                --docker-email=devops@netflix.local \
+                -n netflix
+              echo "✓ Docker registry secret created"
+            fi
+            
+            # Patch service account to use the secret
+            kubectl patch serviceaccount default -n netflix \
+              -p '{"imagePullSecrets": [{"name": "dockerhub-secret"}]}' 2>/dev/null || true
+              
+            echo "✓ Service account patched"
           displayName: "Apply ArgoCD Application"
 
 - stage: Validate
