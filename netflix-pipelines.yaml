@@ -258,6 +258,21 @@ stages:
           displayName: "Wait for Deployment Stabilization"
 
         - script: |
+            echo "=== DEBUG: ArgoCD Application Status ==="
+            kubectl get application netflix -n argocd -o wide
+            echo ""
+            echo "Application sync status:"
+            kubectl get application netflix -n argocd -o jsonpath='{.status.sync.status}'
+            echo ""
+            echo "Application health:"
+            kubectl get application netflix -n argocd -o jsonpath='{.status.health.status}'
+            echo ""
+            echo "Application conditions:"
+            kubectl describe application netflix -n argocd | grep -A 10 "Conditions:" || echo "No conditions found"
+          displayName: "Debug: Check ArgoCD Application"
+          continueOnError: true
+
+        - script: |
             echo "=== Validating Kubernetes Deployment ==="
             
             if ! kubectl get namespace netflix &>/dev/null; then
@@ -268,11 +283,15 @@ stages:
             
             echo "✔ Namespace exists"
             
+            echo "All resources in netflix namespace:"
+            kubectl get all -n netflix
+            echo ""
+            
             DEPLOY_COUNT=$(kubectl get deploy -n netflix --no-headers 2>/dev/null | wc -l)
             if [ "$DEPLOY_COUNT" -eq 0 ]; then
               echo "❌ No deployments found in netflix namespace"
-              echo "Resources in namespace:"
-              kubectl get all -n netflix
+              echo "Checking pod events:"
+              kubectl get events -n netflix --sort-by='.lastTimestamp' | tail -20
               exit 1
             fi
             
