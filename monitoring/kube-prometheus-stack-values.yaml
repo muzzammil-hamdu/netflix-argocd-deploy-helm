@@ -2,6 +2,15 @@ grafana:
   service:
     type: LoadBalancer
 
+  # Enable automatic loading of dashboards from ConfigMaps
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: /dashboard
+    datasources:
+      enabled: true
+
 prometheus:
   service:
     type: LoadBalancer
