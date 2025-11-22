@@ -2,11 +2,16 @@ replicaCount: 2
 
 image:
   repository: mujju752/netflix
-  tag: "latest"
+  tag: ""                 # updated by pipeline
   pullPolicy: Always
 
 imagePullSecrets:
   - name: dockerhub-secret
+
+apiKey:
+  create: false                 # we aren’t storing plaintext in Helm
+  existingSecret: netflix-secrets
+  keyName: TMDB_KEY
 
 service:
   type: ClusterIP
@@ -35,5 +40,8 @@ serviceMonitor:
 env:
   - name: NODE_ENV
     value: "production"
-
-dockerConfigJson: ""
+  - name: TMDB_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: netflix-secrets
+        key: TMDB_KEY
