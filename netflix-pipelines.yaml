@@ -1,0 +1,289 @@
+trigger: none
+
+# Define both repositories
+resources:
+  repositories:
+    - repository: appCode
+      type: git
+      name: myproject/netflix
+      ref: main
+    
+    - repository: gitOps
+      type: git
+      name: myproject/netflix-argocd-deploy
+      ref: main
+
+variables:
+  dockerHubUser: "mujju752"
+  imageName: "netflix"
+  valuesFile: "charts/netflix/values.yaml"
+
+stages:
+
+# -------------------------------------------------------
+# 1) BUILD & PUSH CONTAINER IMAGE
+# -------------------------------------------------------
+- stage: Build
+  displayName: "Build and Push Image"
+  jobs:
+    - job: BuildImage
+      pool:
+        name: projectpool
+        demands: agent.name -equals projectagent
+
+      steps:
+        # Checkout APPLICATION code to build Docker image
+        - checkout: appCode
+          persistCredentials: false
+          clean: true
+
+        - script: |
+            echo "📂 Building from repository: netflix"
+            echo "📋 Files in current directory:"
+            ls -la
+          displayName: "Verify Application Code"
+
+        - task: Docker@2
+          displayName: "Build and Push Docker Image"
+          inputs:
+            command: buildAndPush
+            containerRegistry: dockerhub-conn
+            repository: "$(dockerHubUser)/$(imageName)"
+            dockerfile: "**/Dockerfile"
+            tags: |
+              $(Build.BuildId)
+              latest
+
+
+# -------------------------------------------------------
+# 2) UPDATE VALUES.YAML FOR GITOPS
+# -------------------------------------------------------
+- stage: UpdateGitOps
+  dependsOn: Build
+  displayName: "Update Helm Chart for ArgoCD"
+
+  jobs:
+    - job: UpdateRepo
+      pool:
+        name: projectpool
+        demands: agent.name -equals projectagent
+
+      steps:
+        # Checkout GITOPS repository to update values.yaml
+        - checkout: gitOps
+          persistCredentials: true
+          clean: true
+
+        - script: |
+            sudo apt-get update -y
+            sudo snap install yq
+          displayName: "Install yq"
+
+        - script: |
+            echo "📂 Working in GitOps repository: netflix-argocd-deploy"
+            echo "📋 Repository structure:"
+            ls -la
+            ls -la charts/netflix/
+            
+            echo "🔍 Verifying values.yaml exists..."
+            if [ ! -f "$(valuesFile)" ]; then
+              echo "❌ ERROR: $(valuesFile) not found!"
+              exit 1
+            fi
+            
+            echo "✅ Found values.yaml at: $(valuesFile)"
+            echo "📄 Current content:"
+            cat "$(valuesFile)"
+          displayName: "Verify GitOps Repository"
+
+        - script: |
+            echo "🛠 Updating values.yaml with new image..."
+            
+            # Update the image repository and tag
+            yq -i '
+              .image.repository = "$(dockerHubUser)/$(imageName)" |
+              .image.tag = "$(Build.BuildId)"
+            ' "$(valuesFile)"
+
+            echo "📄 Updated values.yaml content:"
+            cat "$(valuesFile)"
+
+            echo "📌 Configuring Git..."
+            git config user.email "azurepipeline@devops.com"
+            git config user.name "Azure Pipeline Bot"
+
+            echo "🔍 Staging changes..."
+            git add "$(valuesFile)"
+            
+            echo "📝 Git status:"
+            git status
+
+            echo "💾 Committing changes..."
+            if git diff --staged --quiet; then
+              echo "⚠ No changes to commit"
+              exit 0
+            else
+              git commit -m "🚀 Deploy: $(dockerHubUser)/$(imageName):$(Build.BuildId)"
+              echo "✅ Changes committed"
+            fi
+
+            echo "⬆ Pushing to repository..."
+            # Push using the OAuth token from the build service
+            git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" \
+                push origin HEAD:refs/heads/main
+            
+            echo "✅ Successfully pushed changes to GitOps repository"
+          displayName: "Update and Push values.yaml"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+
+# -------------------------------------------------------
+# 3) VALIDATE DEPLOYMENT + AUTO ROLLBACK
+# -------------------------------------------------------
+- stage: Validate
+  dependsOn: UpdateGitOps
+  displayName: "Validate or Rollback"
+
+  jobs:
+    - job: ValidateApp
+      pool:
+        name: projectpool
+        demands: agent.name -equals projectagent
+
+      steps:
+        - checkout: gitOps
+          persistCredentials: true
+          clean: true
+
+        - script: |
+            echo "⏳ Waiting 90 seconds for ArgoCD to sync..."
+            echo "   - ArgoCD detects changes in Git"
+            echo "   - ArgoCD applies changes to Kubernetes"
+            echo "   - Kubernetes rolls out new pods"
+            sleep 90
+          displayName: "Wait for ArgoCD Sync"
+
+        - script: |
+            echo "🔍 Checking deployment health in netflix namespace..."
+            
+            # Verify namespace exists
+            if ! kubectl get namespace netflix &>/dev/null; then
+              echo "❌ Namespace 'netflix' does not exist!"
+              kubectl get namespaces
+              exit 1
+            fi
+            
+            # Check if any deployments exist
+            DEPLOY_COUNT=$(kubectl get deploy -n netflix --no-headers 2>/dev/null | wc -l)
+            if [ "$DEPLOY_COUNT" -eq 0 ]; then
+              echo "❌ No deployments found in netflix namespace"
+              echo "📋 Resources in netflix namespace:"
+              kubectl get all -n netflix
+              exit 1
+            fi
+            
+            # Get the deployment name (assuming first deployment)
+            DEPLOY_NAME=$(kubectl get deploy -n netflix -o jsonpath='{.items[0].metadata.name}')
+            echo "📦 Checking deployment: $DEPLOY_NAME"
+            
+            # Get deployment status
+            READY=$(kubectl get deploy $DEPLOY_NAME -n netflix -o jsonpath='{.status.readyReplicas}')
+            DESIRED=$(kubectl get deploy $DEPLOY_NAME -n netflix -o jsonpath='{.spec.replicas}')
+            UNAVAILABLE=$(kubectl get deploy $DEPLOY_NAME -n netflix -o jsonpath='{.status.unavailableReplicas}')
+            
+            echo "├─ Desired replicas: ${DESIRED:-0}"
+            echo "├─ Ready replicas: ${READY:-0}"
+            echo "└─ Unavailable replicas: ${UNAVAILABLE:-0}"
+            
+            # Check deployment health
+            if [ "${READY:-0}" -eq "${DESIRED:-0}" ] && [ -z "$UNAVAILABLE" ]; then
+              echo ""
+              echo "✅ Deployment is HEALTHY - All pods are ready!"
+              echo ""
+              echo "📋 Pod status:"
+              kubectl get pods -n netflix -l app=netflix
+              exit 0
+            else
+              echo ""
+              echo "❌ Deployment FAILED or INCOMPLETE"
+              echo ""
+              echo "📋 Pod details:"
+              kubectl get pods -n netflix
+              echo ""
+              echo "📝 Recent pod events:"
+              kubectl get events -n netflix --sort-by='.lastTimestamp' | tail -20
+              exit 1
+            fi
+          name: healthCheck
+          continueOnError: true
+          displayName: "Validate Kubernetes Deployment"
+
+        - script: |
+            echo "🔄 =========================================="
+            echo "   INITIATING AUTOMATIC ROLLBACK"
+            echo "   =========================================="
+            echo ""
+            
+            # Fetch full git history
+            git fetch --unshallow 2>/dev/null || git fetch --all
+            
+            # Get the previous deployment tag from git log
+            echo "🔍 Searching for previous deployment in git history..."
+            PREVIOUS=$(git log -n 5 --pretty=format:"%s" | grep -E "Deploy:|🚀" | grep -oP '(?<=: ).*' | sed -n '2p')
+            
+            if [ -z "$PREVIOUS" ]; then
+              echo "⚠ No previous deployment found in recent history"
+              echo "🔄 Using 'latest' tag as fallback"
+              REPO="$(dockerHubUser)/$(imageName)"
+              TAG="latest"
+            else
+              echo "✅ Found previous deployment: $PREVIOUS"
+              REPO=$(echo $PREVIOUS | cut -d ':' -f1)
+              TAG=$(echo $PREVIOUS | cut -d ':' -f2)
+            fi
+            
+            echo ""
+            echo "↩  Rolling back to:"
+            echo "   Repository: $REPO"
+            echo "   Tag: $TAG"
+            echo ""
+            
+            # Update values.yaml with previous version
+            yq -i "
+              .image.repository = \"$REPO\" |
+              .image.tag = \"$TAG\"
+            " "$(valuesFile)"
+            
+            echo "📄 Rolled back values.yaml:"
+            cat "$(valuesFile)"
+            echo ""
+            
+            # Commit and push rollback
+            git config user.email "azurepipeline@devops.com"
+            git config user.name "Azure Pipeline Bot"
+            git add "$(valuesFile)"
+            git commit -m "🔙 ROLLBACK → $REPO:$TAG [Build $(Build.BuildId) validation failed]"
+            
+            echo "⬆  Pushing rollback to repository..."
+            git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" \
+                push origin HEAD:refs/heads/main
+            
+            echo "✅ Rollback committed and pushed successfully"
+            echo ""
+            
+            # Wait for ArgoCD to apply rollback
+            echo "⏳ Waiting 60 seconds for ArgoCD to sync rollback..."
+            sleep 60
+            
+            echo ""
+            echo "📋 Current deployment status after rollback:"
+            kubectl get deployments -n netflix
+            kubectl get pods -n netflix
+            echo ""
+            echo "🔴 Pipeline failed - deployment rolled back to previous version"
+            
+          condition: failed()
+          displayName: "🔙 Automatic Rollback"
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
