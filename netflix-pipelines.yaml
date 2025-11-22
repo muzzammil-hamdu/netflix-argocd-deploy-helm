@@ -148,8 +148,64 @@ stages:
             echo "Successfully pushed to GitHub"
           displayName: "Commit and Push to GitHub"
 
-- stage: Validate
+- stage: CreateArgoApp
   dependsOn: UpdateGitOps
+  displayName: "Create ArgoCD Application"
+
+  jobs:
+    - job: CreateApp
+      pool:
+        name: projectpool
+        demands: agent.name -equals projectagent
+
+      steps:
+        - checkout: gitOpsRepo
+          persistCredentials: true
+          clean: true
+
+        - script: |
+            echo "=== Creating/Updating ArgoCD Application ==="
+            
+            if [ -f "netflix-app.yaml" ]; then
+              echo "Found netflix-app.yaml, applying..."
+              kubectl apply -f netflix-app.yaml
+              echo "✓ ArgoCD Application created/updated"
+            else
+              echo "Creating ArgoCD Application..."
+              cat <<EOF | kubectl apply -f -
+            apiVersion: argoproj.io/v1alpha1
+            kind: Application
+            metadata:
+              name: netflix
+              namespace: argocd
+            spec:
+              project: default
+              source:
+                repoURL: https://github.com/muzzammil-hamdu/netflix-argocd-deploy-helm
+                targetRevision: main
+                path: charts/netflix
+                helm:
+                  releaseName: netflix
+              destination:
+                server: https://kubernetes.default.svc
+                namespace: netflix
+              syncPolicy:
+                automated:
+                  prune: true
+                  selfHeal: true
+                syncOptions:
+                - CreateNamespace=true
+            EOF
+              echo "✓ ArgoCD Application created"
+            fi
+            
+            echo ""
+            echo "Verifying Application exists..."
+            kubectl get application netflix -n argocd
+          displayName: "Apply ArgoCD Application"
+
+- stage: Validate
+  dependsOn: CreateArgoApp
   displayName: "Validate or Rollback"
 
   jobs:
