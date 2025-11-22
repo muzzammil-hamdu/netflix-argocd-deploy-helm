@@ -267,10 +267,40 @@ stages:
             echo "Application health:"
             kubectl get application netflix -n argocd -o jsonpath='{.status.health.status}'
             echo ""
-            echo "Application conditions:"
-            kubectl describe application netflix -n argocd | grep -A 10 "Conditions:" || echo "No conditions found"
+            echo "Full Application details:"
+            kubectl describe application netflix -n argocd
+            echo ""
+            echo "Last sync result:"
+            kubectl get application netflix -n argocd -o jsonpath='{.status.operationState.phase}'
           displayName: "Debug: Check ArgoCD Application"
           continueOnError: true
+
+        - script: |
+            echo "=== Manual ArgoCD Sync ==="
+            export ARGOCD_OPTS='--insecure --grpc-web'
+            
+            echo "Logging into ArgoCD..."
+            echo $(argocdToken) | argocd login $(argocdServer) --username $(argocdUsername) --password-stdin
+            
+            echo ""
+            echo "Getting app status..."
+            argocd app get netflix
+            
+            echo ""
+            echo "Forcing sync..."
+            argocd app sync netflix --prune
+            
+            echo ""
+            echo "Waiting for sync..."
+            sleep 30
+            
+            echo ""
+            echo "Checking status after sync..."
+            argocd app get netflix
+          displayName: "Manual ArgoCD Sync"
+          continueOnError: true
+          env:
+            ARGOCD_AUTH_TOKEN: $(argocdToken)
 
         - script: |
             echo "=== Validating Kubernetes Deployment ==="
