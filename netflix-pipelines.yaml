@@ -221,35 +221,31 @@ stages:
 
         - script: |
             echo "=== Checking ArgoCD Setup ==="
-            export ARGOCD_OPTS='--insecure --grpc-web'
             
-            echo "Logging into ArgoCD..."
-            echo $(argocdToken) | argocd login $(argocdServer) --username $(argocdUsername) --password-stdin
-            
-            echo ""
             echo "Listing ArgoCD applications..."
-            argocd app list || echo "Warning: Could not list apps"
+            argocd app list --insecure --grpc-web || echo "Warning: Could not list apps"
             
             echo ""
             echo "Checking if netflix app exists..."
-            argocd app get netflix || echo "WARNING: netflix app not found in ArgoCD"
+            argocd app get netflix --insecure --grpc-web || echo "WARNING: netflix app not found in ArgoCD"
             
             echo ""
             echo "Syncing Netflix application..."
-            argocd app sync netflix --prune || echo "WARNING: Sync command failed"
+            argocd app sync netflix --prune --insecure --grpc-web || echo "WARNING: Sync command failed"
             
             echo ""
             echo "Waiting for sync to complete (up to 5 minutes)..."
-            argocd app wait netflix --timeout 300 || echo "WARNING: App wait timeout"
+            argocd app wait netflix --timeout 300 --insecure --grpc-web || echo "WARNING: App wait timeout"
             
             echo ""
             echo "Final app status:"
-            argocd app get netflix
+            argocd app get netflix --insecure --grpc-web
             
             echo "ArgoCD sync complete"
           displayName: "Trigger ArgoCD Sync"
           continueOnError: true
           env:
+            ARGOCD_SERVER: $(argocdServer)
             ARGOCD_AUTH_TOKEN: $(argocdToken)
 
         - script: |
