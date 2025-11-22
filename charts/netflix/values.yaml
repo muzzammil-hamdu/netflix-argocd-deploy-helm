@@ -8,17 +8,6 @@ image:
 imagePullSecrets:
   - name: dockerhub-secret
 
-# Secrets configuration
-secrets:
-  enabled: true
-  name: netflix-secrets
-
-# API Key configuration
-apiKey:
-  enabled: true
-  secretName: netflix-secrets
-  secretKey: TMDB_KEY
-
 service:
   type: ClusterIP
   port: 80
