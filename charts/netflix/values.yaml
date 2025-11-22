@@ -2,26 +2,19 @@ replicaCount: 2
 
 image:
   repository: mujju752/netflix
-  tag: "latest"  # Automatically updated by Azure DevOps pipeline
+  tag: "v1.0"
   pullPolicy: Always
 
 imagePullSecrets:
   - name: dockerhub-secret
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 80
   targetPort: 3000
 
 ingress:
-  enabled: true
-  className: nginx
-  tls: false
-  hosts:
-    - host: netflix.your-domain.com
-      paths:
-        - path: /
-          pathType: Prefix
+  enabled: false
 
 autoscaling:
   enabled: true
@@ -30,8 +23,7 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 
 serviceMonitor:
-  enabled: true
-  interval: 30s
+  enabled: false
 
 env:
   - name: NODE_ENV
