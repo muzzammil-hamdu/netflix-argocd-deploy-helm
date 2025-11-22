@@ -1,0 +1,39 @@
+replicaCount: 2
+
+image:
+  repository: muzzammil-hamdu/netflix
+  tag: "latest"
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: dockerhub-secret
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: netflix.your-domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+env:
+  - name: NODE_ENV
+    value: "production"
+
+dockerConfigJson: ""
