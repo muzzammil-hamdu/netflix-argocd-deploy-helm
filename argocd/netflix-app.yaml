@@ -9,9 +9,7 @@ spec:
   source:
     repoURL: https://github.com/muzzammil-hamdu/netflix-argocd-deploy-helm.git
     targetRevision: main
-    path: .
-    directory:
-      recurse: true
+    path: charts/netflix   # <-- FIXED PATH
 
   destination:
     server: https://kubernetes.default.svc
