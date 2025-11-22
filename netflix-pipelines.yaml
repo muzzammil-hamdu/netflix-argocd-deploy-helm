@@ -124,14 +124,25 @@ stages:
             echo "Image Name: $(imageName)"
             echo "New image: $(dockerHubUser)/$(imageName):$(Build.BuildId)"
             
-            # Update repository
+            echo ""
+            echo "Current values.yaml:"
+            cat "$(valuesFile)"
+            
+            echo ""
+            echo "Updating repository..."
             yq -i '.image.repository = "$(dockerHubUser)/$(imageName)"' "$(valuesFile)"
             
-            # Update tag
+            echo "Updating tag..."
             yq -i '.image.tag = "$(Build.BuildId)"' "$(valuesFile)"
 
-            echo "Updated content:"
+            echo ""
+            echo "Updated values.yaml:"
             cat "$(valuesFile)"
+            
+            echo ""
+            echo "Verifying image values:"
+            echo "Repository: $(yq '.image.repository' $(valuesFile))"
+            echo "Tag: $(yq '.image.tag' $(valuesFile))"
           displayName: "Update values.yaml"
 
         - script: |
